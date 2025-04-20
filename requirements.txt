@@ -1,0 +1,9 @@
+   pandas
+   openpyxl
+   fpdf
+   PyPDF2
+   numpy
+   numpy-financial
+   streamlit
+   plotly
+   matplotlib
