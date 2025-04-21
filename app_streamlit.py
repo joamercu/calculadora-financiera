@@ -172,7 +172,8 @@ if ejecutar_button:
         c2.metric("VPN ($)", money(indicadores["VPN ($)"]))
         c3.metric("Recuperación (meses)", indicadores["Periodo de Recuperación (meses)"] or "N/A")
         c4.metric("CET (%)", f"{indicadores.get('CET (%)', 'N/A')}%")
-        c5.metric("Payback descontado", indicadores["Payback Descontado (meses)"] or "N/A")
+        c5.metric("Payback descontado", indicadores.get("Payback Descontado (meses)", "N/A"))
+
 
         with st.expander("ℹ️ ¿Qué significan estos indicadores?"):
             st.markdown("""
