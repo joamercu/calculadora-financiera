@@ -38,11 +38,11 @@ r_EA   = st.sidebar.number_input("Tasa Efectiva Anual (%)", value=10.95, step=0.
 
 # 👉 NUEVO: costo de oportunidad
 costo_oport_EA = st.sidebar.number_input(
-    "Costo de oportunidad EA (%)", value=10.50, step=0.1,
+    "TIO Taza interna de oportunidad EA (%).", value=10.50, step=0.1,
     help="Rendimiento neto que obtendrías en la mejor alternativa de riesgo similar"
 )
 tasa_descuento_anual = st.sidebar.number_input(
-    "Costo de oportunidad (%)", value=10.0, step=0.1
+    "TIO Taza interna de oportunidad EA (%)", value=10.0, step=0.1
 ) / 100
 
 # Tasa nominal mensual informativa (no editable)
