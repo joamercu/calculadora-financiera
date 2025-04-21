@@ -10,8 +10,10 @@ import numpy as np
 from modules.inputs import leer_escenarios_desde_excel
 from modules.amortization import generar_tabla_amortizacion
 from modules.exporter import exportar_excel
+
 from modules.pdf_generator import generar_pdf_resumen
 from modules.pdf_merge import fusionar_pdfs
+from modules.indicators import calcular_indicadores
 
 # ---------- CONFIG BÁSICA ---------- #
 st.set_page_config(page_title="Simulador Financiero", layout="wide")
@@ -145,23 +147,29 @@ if ejecutar_button:
         df = generar_tabla_amortizacion(esc)
 
         # ---------- Indicadores ----------
-        # 4.2 Calcular indicadores
-        flujos = [esc["monto"]] + df["Flujo ($)"].tolist()  # flujo inicial positivo
-        tir_m = npf.irr(flujos)
 
-        # TIR anualizada, solo si tir_m no es None ni NaN
-        if tir_m is None or (isinstance(tir_m, float) and pd.isna(tir_m)):
-            tir_a = None
-        else:
-            tir_a = (1 + tir_m) ** 12 - 1
+        tasa_descuento = st.sidebar.number_input(
+            "Costo de oportunidad (%)", value=10.0, step=0.1
+        ) / 100
 
-        # VPN
-        tasa_m_desc = esc["tasa"] / 12
-        vpn = npf.npv(tasa_m_desc, flujos[1:]) + flujos[0]
+        indicadores = calcular_indicadores(df, tasa_descuento)
 
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("TIR (%)", f"{indicadores['TIR (%)']}%" if indicadores['TIR (%)'] else "N/A")
+        c2.metric("VPN ($)", money(indicadores["VPN ($)"]))
+        c3.metric("Recuperación (meses)", indicadores["Periodo de Recuperación (meses)"] or "N/A")
+        c4.metric("CET (%)", f"{indicadores['CET (%)']}%" if indicadores['CET (%)'] else "N/A")
+        c5.metric("Payback descontado", indicadores["Payback Descontado (meses)"] or "N/A")
 
-            # 4.4 Mostrar indicadores
-        c1, c2, c3 = st.columns(3)
+        with st.expander("ℹ️ ¿Qué significan estos indicadores?"):
+            st.markdown("""
+            - **TIR (%)**: Rentabilidad anual del proyecto. Si es mayor al costo de oportunidad, es rentable.
+            - **VPN ($)**: Valor actual de la inversión. Si es positivo, conviene.
+            - **Periodo de Recuperación**: Cuántos meses toma recuperar el dinero invertido.
+            - **CET (%)**: Costo Efectivo Total del crédito (incluye seguros, etc.).
+            - **Payback descontado**: Mes en que recuperas tu dinero teniendo en cuenta el valor en el tiempo.
+            """)
+
 
         import altair as alt
 
@@ -218,22 +226,12 @@ if ejecutar_button:
 
 
 
-        c1.metric("TIR (%)", f"{round(tir_a * 100, 2):,.2f} %" if tir_a is not None else "N/A")
-        c2.metric("VPN ($)", money(vpn))
+
 
         # --- Payback period (meses) ---
-        acc = 0
-        periodo_recuperacion = None
-        for mes, flujo in enumerate(flujos[1:], start=1):
-            acc += flujo
-            if acc >= 0:
-                periodo_recuperacion = mes
-                break
 
-        c3.metric(
-            "Recuperación (meses)",
-            periodo_recuperacion if periodo_recuperacion is not None else "N/A"
-        )
+
+
 
 
         # ---------- Validaciones ----------
@@ -382,11 +380,10 @@ if ejecutar_button:
         path_excel = os.path.join(carpeta_out, fname)
         exportar_excel(
             path_excel, df,
-            {"TIR (%)": None if tir_a is None else round(tir_a*100, 2),
-             "VPN ($)": vpn,
-             "Periodo de Recuperación (meses)": periodo_recuperacion},
+            indicadores,
             esc["nombre"]
         )
+
         st.download_button("⬇️ Descargar Excel", open(path_excel, "rb").read(),
                            file_name=fname)
 
