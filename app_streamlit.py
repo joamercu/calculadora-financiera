@@ -274,6 +274,23 @@ if ejecutar_button:
         # Crear copia para mostrar sin decimales y con redondeo hacia arriba
         df_redondeado = df.copy()
 
+        # ---------- Mostrar Totales Generales ----------
+        st.subheader("📋 Totales Generales")
+
+        total_cuotas = df["Cuota ($)"].sum()
+        total_intereses = df["Interés ($)"].sum()
+        total_amortizacion = df["Amortización ($)"].sum()
+        total_seguro = df["Seguro ($)"].sum()
+        total_flujo = df["Flujo ($)"].sum()
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        col1.metric("Total Cuotas ($)", f"${total_cuotas:,.0f}".replace(",", "."))
+        col2.metric("Total Intereses ($)", f"${total_intereses:,.0f}".replace(",", "."))
+        col3.metric("Total Amortización ($)", f"${total_amortizacion:,.0f}".replace(",", "."))
+        col4.metric("Total Seguro ($)", f"${total_seguro:,.0f}".replace(",", "."))
+        col5.metric("Total Flujo ($)", f"${total_flujo:,.0f}".replace(",", "."))
+
         # Detectar columnas numéricas que deben redondearse (con $ en el nombre o cuotas)
         columnas_a_redondear = [col for col in df.columns if
                                 "$" in col or "Cuota Total" in col or "Valor de Cuota" in col]
