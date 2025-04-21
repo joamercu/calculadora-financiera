@@ -165,7 +165,7 @@ if ejecutar_button:
             tasa_descuento_anual=costo_oport_EA / 100  # decimal
         )
 
-        indicadores = calcular_indicadores(df, tasa_descuento)
+        indicadores = calcular_indicadores(df, tasa_descuento_anual)
 
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("TIR (%)", f"{indicadores['TIR (%)']}%" if indicadores['TIR (%)'] else "N/A")
