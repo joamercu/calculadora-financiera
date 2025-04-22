@@ -6,8 +6,6 @@ import locale
 
 from modules.grupos import GRUPOS_DETALLE
 
-# Establecer localización en español
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 
 # Zona horaria para Colombia
 tz = pytz.timezone('America/Bogota')
