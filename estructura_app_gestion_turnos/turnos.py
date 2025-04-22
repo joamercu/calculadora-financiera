@@ -7,7 +7,6 @@ import locale
 from modules.grupos import GRUPOS_DETALLE
 
 # Configurar localización en español (intentar, si falla, continuar con defecto)
-try:
     
 
 # Zona horaria para Colombia
