@@ -2,14 +2,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
-import locale
-
-
-# Configurar localización en español (intentar, si falla, continuar con defecto)
-try:
-    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-except locale.Error:
-    pass
 
 # Zona horaria para Colombia
 tz = pytz.timezone('America/Bogota')
@@ -22,6 +14,22 @@ FECHA_INICIO_GRUPOS = {
     'Grupo D': tz.localize(datetime(2025, 4, 4)),
 }
 GRUPOS = list(FECHA_INICIO_GRUPOS.keys())
+
+# Diccionarios para formateo manual de fecha en español
+MESES_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
+DIAS_ES = [
+    "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"
+]
+
+def formatear_fecha_es(fecha: datetime) -> str:
+    dia_semana = DIAS_ES[fecha.weekday()]
+    dia = fecha.day
+    mes = MESES_ES[fecha.month - 1]
+    anio = fecha.year
+    return f"{dia_semana}, {dia} de {mes} de {anio}"
 
 def grupo_activo(fecha_hoy):
     """
@@ -50,7 +58,7 @@ def generar_tabla_turnos(desde: datetime, hasta: datetime):
     for fecha in fechas:
         fecha_local = tz.localize(datetime.combine(fecha, datetime.min.time()))
         estados = grupo_activo(fecha_local)
-        fila = { 'Fecha': fecha_local.strftime('%A, %d de %B de %Y').capitalize() }
+        fila = { 'Fecha': formatear_fecha_es(fecha_local) }
         for grupo, estado, dias_rest in estados:
             icon = '🛠️' if estado == 'trabajo' else '😴'
             fila[grupo] = f"{icon} {estado.capitalize()} ({dias_rest})"
