@@ -1,103 +1,100 @@
 # app_streamlit.py
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from pathlib import Path
 
-# Configuración de la página (primero)
+# Configuración de la página (única llamada al inicio)
 st.set_page_config(
     page_title="Dashboard Comparación Apartamentos",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
-# Carga de defaults
-def load_defaults():
+# Función única de carga de datos (cacheada)
+@st.cache_data
+def load_data():
     base = Path(__file__).parent
-    for path in [base/'data'/'default_values.csv', base/'data'/'load_defaults.csv', base/'load_defaults.csv']:
-        if path.exists():
+    for file in [
+        base / 'data' / 'default_values.csv',
+        base / 'data' / 'load_defaults.csv',
+        base / 'load_defaults.csv'
+    ]:
+        if file.exists():
             try:
-                df = pd.read_csv(path)
+                df = pd.read_csv(file)
                 if 'Item' in df.columns:
-                    df = df.set_index('Item')
-                return df
+                    df.set_index('Item', inplace=True)
+                return df[['Apto Granja', 'Apto Bolivia']]
             except:
                 break
-    # Fallback estático
+    # Fallback con columnas esenciales
     defaults = {
         'PRECIO': {'Apto Granja': 315000000, 'Apto Bolivia': 307000000},
         'ESTRATO': {'Apto Granja': 3, 'Apto Bolivia': 3},
         'ADMINISTRACION': {'Apto Granja': 115000, 'Apto Bolivia': 350000},
-        'PARQUEADERO': {'Apto Granja': 'SI', 'Apto Bolivia': 'SI'},
-        'HABITACIONES': {'Apto Granja': 3, 'Apto Bolivia': 3},
-        'ESTUDIO': {'Apto Granja': 1, 'Apto Bolivia': 0},
-        'CLOSETS': {'Apto Granja': 'En 2 habitaciones', 'Apto Bolivia': 'SI'},
-        'BAÑOS': {'Apto Granja': 2, 'Apto Bolivia': 2},
-        'VENTILACION': {'Apto Granja': 'NO', 'Apto Bolivia': 'SI'},
-        'REQUIERE REMODELAR': {'Apto Granja': 'SI', 'Apto Bolivia': 'NO'},
-        'PISOS': {'Apto Granja': 1, 'Apto Bolivia': 4},
-        'ESCALERAS': {'Apto Granja': 'SI', 'Apto Bolivia': 'SI'},
-        'COCINA': {'Apto Granja': 'SI', 'Apto Bolivia': 'SI'},
-        'EXTRACTOR': {'Apto Granja': 'NO', 'Apto Bolivia': 'SI'},
-        'CENTRO DE ENTRETENIMIENTO': {'Apto Granja': 'NO', 'Apto Bolivia': 'SI'},
-        'ILUMINACION AHORRADORA': {'Apto Granja': 'SI', 'Apto Bolivia': 'NO'},
-        'IMPUESTO PREDIAL': {'Apto Granja': 500000, 'Apto Bolivia': 450000},
-        'METRAJE': {'Apto Granja': 78, 'Apto Bolivia': 69},
-        'DISTANCIA TRANSPORTE': {'Apto Granja': 11, 'Apto Bolivia': 23},
-        'CORTINAS': {'Apto Granja': 'SI', 'Apto Bolivia': 'SI'}
+        'METRAJE': {'Apto Granja': 78, 'Apto Bolivia': 69}
     }
     return pd.DataFrame.from_dict(defaults, orient='index')
 
-# Datos iniciales
-df_defaults = load_defaults()
+# Helper para editor de datos con fallback
+def data_editor(df, **kwargs):
+    try:
+        return st.experimental_data_editor(df, **kwargs)
+    except AttributeError:
+        return st.data_editor(df, **kwargs)
+
+# Cargar o recuperar datos en sesión
+if 'df_defaults' not in st.session_state:
+    st.session_state['df_defaults'] = load_data()
+
+# Obtener DataFrame base
+df_defaults = st.session_state['df_defaults']
 
 # Título y descripción
 st.title("🏢 Comparación de Apartamentos")
 st.markdown("### 📊 Apto Granja vs Apto Bolivia")
 
-# Edición masiva de datos
-data_editor_df = df_defaults.reset_index().rename(columns={'index':'Item'})
-try:
-    df_edit = st.experimental_data_editor(data_editor_df, num_rows='dynamic')
-except AttributeError:
-    df_edit = st.data_editor(data_editor_df, num_rows='dynamic')
+# Preparar DataFrame para edición
+editor_df = df_defaults.reset_index().rename(columns={'index': 'Item'})
 
-# Convertir edición en DataFrame indexado
-df_current = df_edit.set_index('Item')
+# Ejecutar editor de datos
+df_edit = data_editor(editor_df, num_rows='dynamic')
 
-# Métricas resumen
-t1, t2, t3, t4 = st.columns(4)
-precio_g = pd.to_numeric(df_current.loc['PRECIO','Apto Granja'], errors='coerce')
-precio_b = pd.to_numeric(df_current.loc['PRECIO','Apto Bolivia'], errors='coerce')
-met_g = pd.to_numeric(df_current.loc['METRAJE','Apto Granja'], errors='coerce')
-met_b = pd.to_numeric(df_current.loc['METRAJE','Apto Bolivia'], errors='coerce')
-with t1: st.metric("💰 Precio Granja", f"${precio_g:,.0f}" if not pd.isna(precio_g) else "N/A")
-with t2: st.metric("💰 Precio Bolivia", f"${precio_b:,.0f}" if not pd.isna(precio_b) else "N/A")
-with t3: st.metric("📏 Metraje Granja", f"{met_g} m²" if not pd.isna(met_g) else "N/A")
-with t4: st.metric("📏 Metraje Bolivia", f"{met_b} m²" if not pd.isna(met_b) else "N/A")
+# Validar columna 'Item' antes de indexar
+if 'Item' in df_edit.columns:
+    df_current = df_edit.set_index('Item')
+else:
+    st.warning("Columna 'Item' no encontrada; se mantiene índice numérico.")
+    df_current = df_edit.copy()
 
-# Info diferencia precio
-if not pd.isna(precio_g) and not pd.isna(precio_b):
-    diff = precio_g - precio_b
-    if diff>0: st.info(f"💡 Bolivia más económico por ${abs(diff):,.0f}")
-    elif diff<0: st.info(f"💡 Granja más económico por ${abs(diff):,.0f}")
+# Métricas esenciales
+cols = st.columns(4)
+for idx, label in enumerate(['PRECIO', 'METRAJE']):
+    try:
+        g_val = pd.to_numeric(df_current.loc[label, 'Apto Granja'], errors='coerce')
+        b_val = pd.to_numeric(df_current.loc[label, 'Apto Bolivia'], errors='coerce')
+    except KeyError:
+        g_val = b_val = None
+    unit = ' m²' if label == 'METRAJE' else ''
+    with cols[idx*2]:
+        st.metric(f"{label} Granja", f"{g_val:,.0f}{unit}" if g_val is not None else "N/A")
+    with cols[idx*2+1]:
+        st.metric(f"{label} Bolivia", f"{b_val:,.0f}{unit}" if b_val is not None else "N/A")
 
-# Visualizaciones
-tab1, tab2 = st.tabs(["📋 Datos","📊 Gráficos"])
+# Pestañas de Datos y Gráficos
+tab1, tab2 = st.tabs(["📋 Datos", "📊 Gráficos"])
 
 with tab1:
     st.write(df_current)
 
 with tab2:
-    # Datos numéricos
-    num = df_current[['Apto Granja','Apto Bolivia']].apply(pd.to_numeric, errors='coerce').dropna()
+    num = df_current.apply(pd.to_numeric, errors='coerce').dropna()
     if not num.empty:
         st.subheader('📊 Comparativo Numérico')
         st.bar_chart(num)
-        st.subheader('📈 Línea Comparativa')
-        st.line_chart(num)
-        diff = (num['Apto Granja']-num['Apto Bolivia']).abs()
         st.subheader('📈 Diferencia Absoluta')
-        st.bar_chart(diff)
+        diff = (num['Apto Granja'] - num['Apto Bolivia']).abs()
+        st.line_chart(diff)
     else:
         st.warning('No hay datos numéricos para graficar')
 
